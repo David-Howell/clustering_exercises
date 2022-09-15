@@ -1,3 +1,5 @@
 env.py
 all_zillow_2017_transactions
+*.kml
+zillow_2017_transactions
 
