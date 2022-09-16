@@ -2,7 +2,6 @@ import os
 import math
 import pandas as pd
 import numpy as np
-from env import gdb
 import matplotlib.pyplot as plt
 import seaborn as sns
 from statistics import harmonic_mean
@@ -20,23 +19,58 @@ from IPython.display import display, Markdown, Latex
 import warnings
 warnings.filterwarnings("ignore")
 
+def get_wrangled():
+    print('''
+# this will pull in the DB from the RDBMS or cache
+# utilizes get_db_url, gdb, and is dependent on an env.py file with credentials
+# summarize will give a summary of a DataFrame
+from wrangle import get_zillow, summarize, sfr, remove_outliers,\
+     handle_missing_values, split_data_continuous
 
-'''
-<  GET_ZILLOW_MVP  >
-<  CLEAN_ZILLOW  >
-<  SPLIT_DATA_CONTINUOUS  >
-<  BOXPLOTS  >
-<  REMOVE_OUTLIERS  >
-<  HR (HUMAN READABLE)  >
-<  HISTS  >
-<  SLICER  >
-<  SCALE_DATA  >
-<  BASELINES  >
-<  MODEL_SETS  >
-<  MAKE_METRICS  >
-<  MAKE_MODELS  >
-<  GET_MODELS  >
-'''
+
+    ''')
+
+# <  get_db_url             >
+# <  gdb (Get DataBase)    >
+# <  get_zillow             >
+# <  nulls_by_row           >
+# <  nulls_by_col           >
+# <  summarize v.1.1        >
+# <  column_value_counts    >
+##<  SUMMARIZE V.1.0        >##
+# <  sfr                    >
+##<  CLEAN_ZILLOW           >##
+# <  split_data_continuous  >
+# <  remove_outliers        >
+# <  handle_missing_values  >
+
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~<  GET_DB_URL  >~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+
+def get_db_url(schema):
+    import env
+    user = env.username
+    password = env.password
+    host = env.host
+    conn = f'mysql+pymysql://{user}:{password}@{host}/{schema}'
+    return conn
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~<  GDB! (Get DataBase) >~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+
+def gdb(db_name, query):
+    '''
+    gdb(db_name, query):
+    
+        takes in    a (db_name) schema name from the codeup database ;dtype int
+        and         a (query) to the MySQL server ;dtype int
+
+        and         returns the query using pd.read_sql(query, url)
+        having      created the url from my environment file
+    '''
+    from pandas import read_sql
+    from env import get_db_url
+    url = get_db_url(db_name)
+    return read_sql(query, url)
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~<  GET_ZILLOW  >~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 
@@ -48,102 +82,7 @@ def get_zillow():
     A DataFrame is returned with df. shape: (52_279, 62)
 
     The query used on the zillow schema on the codeup MySQL database:
-
-    SELECT 	ps.id id,
-			ps.parcelid parcel,
-            ps.logerror logerror,
-            ps.transactiondate trans_date,
-            air.airconditioningdesc ac_type,
-			arc.architecturalstyledesc arch_type,
-			bui.buildingclassdesc build_type,
-			hea.heatingorsystemdesc heat_type,
-			pro.propertylandusedesc land_use_type,
-			sto.storydesc story_type,
-			typ.typeconstructiondesc construction_type,
-            p.basementsqft basementsqft,
-            p.bathroomcnt bathrooms,
-            p.bedroomcnt bedrooms,
-            p.buildingqualitytypeid quality_type,
-            p.calculatedbathnbr calc_bath_n_bed,
-            p.decktypeid deck_type,
-            p.finishedfloor1squarefeet floor_1_sqft,
-            p.calculatedfinishedsquarefeet tot_sqft,
-            p.finishedsquarefeet12 sqft_12,
-            p.finishedsquarefeet13 sqft_13,
-            p.finishedsquarefeet15 sqft_15,
-            p.finishedsquarefeet50 sqft_50,
-            p.finishedsquarefeet6 sqft_6,
-            p.fips fips,
-            p.fireplacecnt fireplaces,
-            p.fullbathcnt full_baths,
-            p.garagecarcnt garages,
-            p.garagetotalsqft garage_sqft,
-            p.hashottuborspa hot_tub,
-            p.latitude lat,
-            p.longitude lon,
-            p.lotsizesquarefeet lot_sqft,
-            p.poolcnt pools,
-            p.poolsizesum pool_sqft,
-            p.pooltypeid10 pool_id10,
-            p.pooltypeid2 pool_id2,
-            p.pooltypeid7 pool_id7,
-            p.propertycountylandusecode county_landuse,
-            p.propertyzoningdesc zoning,
-            p.rawcensustractandblock raw_tract_and_block,
-            p.regionidcity city_id,
-            p.regionidcounty county_id,
-            p.regionidneighborhood neighborhood,
-            p.regionidzip zip_code,
-            p.roomcnt num_rooms,
-            p.storytypeid stories_type,
-            p.threequarterbathnbr three_quarter_baths,
-            p.unitcnt units,
-            p.yardbuildingsqft17 yard_sqft_17,
-            p.yardbuildingsqft26 yard_sqft_26,
-            p.yearbuilt year_built,
-            p.numberofstories num_stories,
-            p.fireplaceflag fireplace_flag,
-            p.structuretaxvaluedollarcnt building_tax_value,
-            p.taxvaluedollarcnt tax_value,
-            p.assessmentyear year_assesed,
-            p.landtaxvaluedollarcnt land_tax_value,
-            p.taxamount tax_amount,
-            p.taxdelinquencyflag tax_delinquency_flag,
-            p.taxdelinquencyyear tax_delinquency_year,
-            p.censustractandblock tract_and_block
-            
-		FROM predictions_2017 ps
-LEFT JOIN properties_2017 p
-ON ps.parcelid = p.parcelid
-
-LEFT JOIN airconditioningtype air
-ON p.airconditioningtypeid = air.airconditioningtypeid
-
-LEFT JOIN architecturalstyletype arc
-ON p.architecturalstyletypeid = arc.architecturalstyletypeid
-
-LEFT JOIN buildingclasstype bui
-ON p.buildingclasstypeid = bui.buildingclasstypeid
-
-LEFT JOIN heatingorsystemtype hea
-ON p.heatingorsystemtypeid = hea.heatingorsystemtypeid
-
-LEFT JOIN propertylandusetype pro
-ON p.propertylandusetypeid = pro.propertylandusetypeid
-
-LEFT JOIN storytype sto
-ON p.storytypeid = sto.storytypeid
-
-LEFT JOIN typeconstructiontype typ
-ON p.typeconstructiontypeid = typ.typeconstructiontypeid
-    WHERE transactiondate >= "2017-01-01" 
-		AND transactiondate < "2018-01-01"
-        AND p.bedroomcnt > 0
-        AND p.bathroomcnt > 0 
-        AND p.calculatedfinishedsquarefeet > 0
-        AND p.taxvaluedollarcnt > 0;
        
-        
     If pickled and available locally as filename: 'zillow_2017_transactions':
 
         The DataFrame is pulled from there instead.
@@ -373,7 +312,7 @@ def summarize(df, cat_cols= None, too_long= 50, show_all= False, q= 10):
     -----------------
     
     '''))
-    column_value_counts(df= df,
+    column_value_counts(df,
                         cat_cols= cat_cols, 
                         too_long= too_long, 
                         show_all= show_all, 
@@ -602,34 +541,6 @@ def split_data_continuous(df, rand_st=123, with_baseline=False):
         print(f'The {best_baseline} had the lowest RMSE: {round(best_rmse)} with an in/out of: {round(in_out,3)}')
 
     return train, validate, test
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~<  BOXPLOTS  >~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
-
-def boxplots(df, excluding=False):
-    '''
-    make boxplots from all the columns in a dataframe, excluding anything you want to exclude
-    '''
-    # Set the cols for use in creating the boxplots
-    cols = [col for col in df.columns if col not in [excluding]]
-# set the figure and for loop to plot each column
-    plt.figure(figsize=(16, 20))
-    for i, col in enumerate(cols):
-
-        # i starts at 0, but plot nos should start at 1
-        plot_number = i + 1 
-
-        # Create subplot.
-        plt.subplot(1, len(cols), plot_number)
-
-        # Title with column name.
-        plt.title(col)
-
-        # Display boxplot for column.
-        sns.boxplot(data=df[col])
-
-        # Hide gridlines.
-        plt.grid(False)
-
-    plt.show()
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~<  REMOVE_OUTLIERS  >~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 
@@ -681,462 +592,8 @@ def handle_missing_values(df,
     df = df.dropna(axis=0, thresh = threshold)
     return df
 
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~<  UNDERLINE  >~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 
-def bold(text):
-    result = '\033[1m' + text + '\033[0m'
-    return result
 
 
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~<  UNDERLINE  >~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 
-def underline(text):
-    result = ''
-    for c in text:
-        result = result + c + '\u0332'
-    return result
 
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~<  STRIKE  >~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
-
-def strike(text):
-    result = ''
-    for c in text:
-        result = result + c + '\u0336'
-    return result
-
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~<  HR (HUMAN READABLE)  >~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
-
-def hr(n, suffix='', places=2, prefix='$'):
-    '''
-    Return a human friendly approximation of n, using SI prefixes
-
-    '''
-    prefixes = ['','K','M','B','T']
-    
-    # if n <= 99_999:
-    #     base, step, limit = 10, 4, 100
-    # else:
-    #     base, step, limit = 10, 3, 100
-
-    base, step, limit = 10, 3, 100
-
-    if n == 0:
-        magnitude = 0 #cannot take log(0)
-    else:
-        magnitude = math.log(n, base)
-
-    order = int(round(magnitude)) // step
-    return '%s%.1f %s%s' % (prefix, float(n)/base**(order*step), \
-    prefixes[order], suffix)
-
-
-
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~<  HISTS  >~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
-
-
-def hists(df, exclude='', granularity=5): 
-
-    '''
-    Make histograms of all the columns in a dataframe, except any you want to exclude, and you can set the number of bins with granularity
-    '''   
-    # Set figure size. Went with 4x for the width:height to display 4 graphs... future version could have these set be the DataFrame columns used
-    plt.figure(figsize=(16, 4))
-
-    # List of columns
-    cols = [col for col in df.columns if col not in [exclude]]
-
-    for i, col in enumerate(cols):
-
-        # i starts at 0, but plot nos should start at 1
-        plot_number = i + 1 
-
-        # Create subplot.
-        plt.subplot(1, len(cols), plot_number)
-
-        # Title with column name.
-        plt.title(col)
-
-        # Display histogram for column.
-        df[col].hist(bins=granularity)
-
-        # Hide gridlines.
-        plt.grid(False)
-
-        # turn off scientific notation
-        plt.ticklabel_format(useOffset=False)
-
-        # mitigate overlap
-        plt.tight_layout()
-
-    plt.suptitle(f'{hr(len(df),prefix="")} \
-Houses in $ Range > {hr(df.tax_value.min())} - {hr(df.tax_value.max())} <',
-                 y=1.05,
-                 size=20
-                )
-    plt.show()
-
-
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~<  heatmaps  >~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
-def heatmaps(train, num_cols):
-    '''
-    Makes a correlation Heatmap for the numerical variables
-    
-    Parameters:
-    ---------------
-        train : DataFrame
-        num_cols : a list of the numerical varibles
-    
-    '''
-    # create the correlation matrix using pandas .corr()
-    zill_corr = train[cum_cols].corr()
-
-    # pass my correlation matrix to a heatmap
-    kwargs = {'alpha':.9,
-            'linewidth':3, 
-            'linestyle':'-',
-            'linecolor':'black'}
-
-    sns.heatmap(zill_corr, cmap='Purples', annot=True,
-            mask=np.triu(zill_corr), **kwargs)
-    plt.show()
-
-
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~<  SLICER  >~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
-
-def slicer(df, min=0, max=1_000_000, step=50_000):
-    '''
-    SLICER:
-    ------------------------------
-    Takes in a DataFrame and provides Histograms of each slice of tax_value
-    the min max and step size of the bins can be set.
-    also the standard deviation of each slice is output
-    '''
-    
-    for i in range(min, max, step):
-        price_range = 50_000
-        houses = df[(i < df.tax_value) & (df.tax_value < i + price_range)]
-        
-    #     print(f'The standard deviation of houses between:\n\
-    #     {i} and {i+price_range} is:\n ${round(houses.tax_value.std())}')
-        
-    #     print(houses.tax_value.describe())
-        
-        hists(houses, 'date')
-        
-        print(f'''
-        σ = {round(houses.beds.std())} beds         |     \
-    σ = {round(houses.baths.std())} baths      |     \
-    σ = {round(houses.area.std())} sqft      |     \
-    σ = {hr(houses.tax_value.std())} 
-        ''')
-
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~<  SCALE_DATA  >~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
-
-def scale_data(train, validate, test):
-    '''
-    scales the data using MinMaxScaler from SKlearn
-    '''
-#     Remember incoming columns and index numbers to output DataFrames
-    cols = train.columns
-    train_index = train.index
-    validate_index = validate.index
-    test_index = test.index
-    
-#     Make the scaler
-    scaler = MinMaxScaler()
-    
-#     Use the scaler
-    train = scaler.fit_transform(train)
-    validate = scaler.transform(validate)
-    test = scaler.transform(test)
-    
-#     Reset the transformed datasets into DataFrames
-    train = pd.DataFrame(train, columns= cols, index= train_index)
-
-    validate = pd.DataFrame(validate, columns= cols, index= validate_index)
-
-    test = pd.DataFrame(test, columns= cols, index= test_index)
-    
-    return train, validate, test
-
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~<  BASELINES  >~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
-def get_baselines(train, validate, test, y='tax_value'):
-    '''
-    Parameters:
-    --------------------
-    
-    train           :       your training set
-    validate        :       your validation set
-    test            :       your test set
-    y=  (tax_value) :       the target variable
-    '''
-    # Various methods for baseline predictions
-    # We'll make new columns for each, and stick them in our training set
-
-    train['mean_preds'] = \
-    train[y].mean()
-
-    train['median_preds'] = \
-    train[y].median()
-
-    train['mode_preds'] = \
-    train[y].round(1).mode()[0]
-
-    train['m_mmm_preds'] = \
-    sum([train[y].mean(), train[y].median(), train[y].round(1).mode()[0]])/3
-
-    train['hm_mmm_preds'] = \
-    harmonic_mean([train[y].mean(), train[y].median(), train[y].round(1).mode()[0]])
-
-    train['h_m_total_preds'] = \
-    harmonic_mean(train[y])
-
-    train_index = train.index.tolist()
-    #  broke out the number ... damn, i need to rewrite all of this to use enumerate SMH
-    one = train_index[0]
-
-    baselines = ['mean_preds',
-    'median_preds',
-    'mode_preds',
-    'm_mmm_preds',
-    'hm_mmm_preds',
-    'h_m_total_preds']
-
-    for i in baselines:
-        validate[i] = train[i][one]
-        test[i] = train[i][one]
-    
-    return train, validate, test
-
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~<  MODEL_SETS  >~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
-
-def model_sets(train, validate, test, scale_X_cols=True, target='tax_value'):
-    '''
-    Takes in the train, validate, and test sets and returns the X_train, y_train, etc. subsets
-
-    Should look like: 
-            
-            X_train, y_train, x_validate, y_validate, X_test, y_test = model_sets(train, validate, test)
-
-    Parameters:
-    ------------------
-    train     :  your split        train data
-    
-    validate  :  your split   validation data
-    
-    test      :  your split         test data
-
-    scale_X_cols  :  (=True) this will invoke the scale_data function to scale the data using MinMaxScaler
-                        False will skip the scaling and return the unscaled version
-
-    target        :  (='tax_value') is your target variable, set to tax_value, cause that's what I was working on ;)
-
-
-    Returns:
-    ------------------
-    X_train, y_train,
-    X_validate, y_validate,
-    X_test, y_test
-
-    These can be used to train and evaluate model performance!
-
-    '''
-
-    # use forloop to get columns for X_cols exckuding the target and the baseline
-    X_cols = []
-    for i in train.columns:
-        if i not in [target, 'baseline']:
-            X_cols.append(i)
-    y_cols = [target, 'baseline']
-
-    # print what they are for the users reference
-    print(f'\nX_cols = {X_cols}\n\ny_cols = {y_cols}\n\n')
-
-    # set the X_ and y_ for train, validate and test
-    X_train, y_train = train[X_cols], train[y_cols]
-    X_validate, y_validate = validate[X_cols], validate[y_cols]
-    X_test, y_test = test[X_cols], test[y_cols]
-
-    # if scale_X_cols is true then we send all of our X_ columns trhough the scale_data function
-    if scale_X_cols:
-        X_train, X_validate, X_test = scale_data(X_train, X_validate, X_test)
-
-    # 
-    return X_train, y_train, X_validate, y_validate, X_test, y_test
-
-
-
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~<  MAKE_METRICS  >~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
-
-def make_metrics(zillow, target='tax_value'):
-    '''
-    takes in a list of DataFrames:
-    -------------------
-            zillow = [df, X_train, y_train, X_validate, y_validate, X_test, y_test]
-
-    and a target variable
-    '''
-
-    # Make metrics
-    rmse = mean_squared_error(zillow[2][target], zillow[2].baseline) ** (1/2)
-    r2 = explained_variance_score(zillow[2][target], zillow[2].baseline)
-
-    rmse_v = mean_squared_error(zillow[4][target], zillow[4].baseline) ** (1/2)
-    r2_v = explained_variance_score(zillow[4].tax_value, zillow[4].baseline)
-# Setup the metric dataframe
-    metric_df = pd.DataFrame(data=[{
-        'model': 'baseline',
-        'rmse_train': hr(rmse),
-        'r^2': r2,
-        'rmse_validate': hr(rmse_v),
-        'r^2_validate': r2_v}])
-
-    return metric_df
-
-
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~<  MAKE_MODELS  >~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
-def make_models(zillow, target='tax_value'):
-    '''
-    Makes trained models from the X_train and y_train sets and evaluates them on validation sets
-
-    models include:
-                    Linear Regression
-                    Lasso Lars
-                    GLM (Tweedie Reg)
-
-    Returns:
-    -----------------
-    a list of the X_ y_ dataframes, the models in a dataframe, and the metrics for the models in a dataframe
-    zillow, models, metric_df
-
-    '''
-    
-    # Name and make models
-    models = pd.DataFrame(\
-    {'model_name':['Linear Regression',
-                'Lasso Lars',
-                'GLM (Tweedie Reg)',
-                ],
-    'made_model': [LinearRegression(normalize=True),
-                LassoLars(alpha=1, random_state=123),
-                TweedieRegressor(power=(1), alpha=0)
-                ],}
-    )
-
-    # Fit the models
-    models['fit_model'] = models.model_name
-    for i, j in enumerate(models.made_model):
-        models['fit_model'][i] = j.fit(zillow[1], zillow[2].tax_value)
-
-    # Make Model Predictors
-    models['predict_model'] = models.model_name
-    for i, j in enumerate(models.fit_model):
-        models.predict_model[i] = j.predict
-
-    # Make metrics_df
-    metric_df = make_metrics(zillow)
-
-    # Fill metrics_df with predictions
-    for i, j in enumerate(models.predict_model):
-        
-    #     Make prediction: zillow[2] is y_train, [4] is y_validate, j is the .predict
-        zillow[2][models.model_name[i]] = j(zillow[1])
-        zillow[4][models.model_name[i]] = j(zillow[3])
-        
-    # Make metrics
-            
-        rmse = mean_squared_error(zillow[2][target], j(zillow[1])) ** (1/2)
-        r2 = explained_variance_score(zillow[2][target], j(zillow[1])) 
-
-        rmse_v = mean_squared_error(zillow[4][target], j(zillow[3])) ** (1/2)
-        r2_v = explained_variance_score(zillow[4][target], j(zillow[3]))
-
-        metric_df = metric_df.append([{
-            'model': models.model_name[i],
-                'rmse_train': hr(rmse),
-                'r^2': r2,
-                'rmse_validate': hr(rmse_v),
-                'r^2_validate': r2_v}])
-
-    return zillow, models, metric_df
-
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~<  GET_MODELS  >~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
-
-def get_models():
-    '''
-    No Parameters!
-    -----------------
-    just run the function saving the three outputs
-
-    outputs a list of the X_ y_ dataframes, the models in a dataframe, 
-    and the metrics for the models in a dataframe
-
-    zillow, models, metric_df 
-    '''
-    # grab the clean data
-    df = clean_zillow()
-    # split it
-    train, validate, test = split_data_continuous(df, with_baseline=True)
-    # get the model sets
-    X_train, y_train, X_validate, y_validate, X_test, y_test = model_sets(train, validate, test)
-    # make the list of sets to put into the models
-    zillow = [df, X_train, y_train, X_validate, y_validate, X_test, y_test]
-    # Use the make_models function
-    zillow, models, metric_df = make_models(zillow)
-    # output the results
-    return zillow, models, metric_df
-
-
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~<  HAVERSINE  >~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
-
-
-from math import radians, cos, sin, asin, sqrt
-
-def haversine(lon1: float, lat1: float, lon2: float, lat2: float) -> float:
-    """
-    Calculate the great circle distance between two points on the 
-    earth (specified in decimal degrees), returns the distance in
-    meters.
-    All arguments must be of equal length.
-    :param lon1: longitude of first place
-    :param lat1: latitude of first place
-    :param lon2: longitude of second place
-    :param lat2: latitude of second place
-    :return: distance in meters between the two sets of coordinates
-    """
-    # Convert decimal degrees to radians
-    lon1, lat1, lon2, lat2 = map(radians, [lon1, lat1, lon2, lat2])
-
-    # Haversine formula
-    dlon = lon2 - lon1
-    dlat = lat2 - lat1
-    a = sin(dlat/2)**2 + cos(lat1) * cos(lat2) * sin(dlon/2)**2
-    c = 2 * asin(sqrt(a))
-    r = 6371 # Radius of earth in kilometers
-    return c * r
-
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~<  evaluate  >~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
-def evaluate(y_validate):
-    '''
-    evaluate the models on the y_validate set 
-    '''
-    # y_validate.head()
-    plt.figure(figsize=(16,8))
-    plt.plot(y_validate.tax_value, y_validate.baseline, alpha=1, color="gray", label='_nolegend_')
-    plt.annotate("Baseline: Predict Using Mean", (16, 9.5))
-    plt.plot(y_validate.tax_value, y_validate.tax_value, alpha=.5, color="blue", label='_nolegend_')
-    plt.annotate("The Ideal Line: Predicted = Actual", (.5, 3.5), rotation=15.5)
-
-    plt.scatter(y_validate.tax_value, y_validate['Linear Regression'], 
-                alpha=.2, color="red", s=100, label="Model: LinearRegression")
-    plt.scatter(y_validate.tax_value, y_validate['GLM (Tweedie Reg)'], 
-                alpha=.2, color="yellow", s=100, label="Model: TweedieRegressor")
-    plt.scatter(y_validate.tax_value, y_validate['Lasso Lars'], 
-                alpha=.2, color="green", s=100, label="Model: Lasso Lars")
-    plt.legend()
-    plt.xlabel("Actual Tax Value")
-    plt.ylabel("Predicted Tax Value")
-    plt.title("Where are predictions more extreme? More modest?")
-    plt.annotate("The polynomial model appears to overreact to noise", (2.0, -10))
-    plt.annotate("The OLS model (LinearRegression)\n appears to be most consistent", (15.5, 3))
-    plt.show()
