@@ -39,7 +39,7 @@ from wrangle import get_zillow, summarize, sfr, remove_outliers,\
 # <  column_value_counts    >
 ##<  SUMMARIZE V.1.0        >##
 # <  sfr                    >
-##<  CLEAN_ZILLOW           >##
+# <  clean_zillow           >
 # <  split_data_continuous  >
 # <  remove_outliers        >
 # <  handle_missing_values  >
@@ -449,33 +449,71 @@ def SFR(df):
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~<  CLEAN_ZILLOW  >~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 
-# def clean_zillow():
-#     '''
-#     No parameters!
-#     ----------------
+def clean_zillow():
+    '''
+    No parameters!
+    ----------------
 
-#     This will output a clean dataframe of zillow information with outliers removed
-#     also, why model based on houses less than $100,000.00 or more than $1M 
-#     and we will reset the index, which will allow us to use the boxplots function for explore
-#     '''
-# # Use get_zillow_mvp
-#     df= get_zillow()
+    This will output a clean dataframe of zillow information with outliers removed
+    also, why model based on houses less than $100,000.00 or more than $1M 
+    and we will reset the index, which will allow us to use the boxplots function for explore
+    '''
 
-# # NEED TO UPDATE THE COLS FOR OUTLIERS BEFORE USING
+    df= get_zillow()
+
+    outlier_cols = ['bathrooms',
+    'bedrooms',
+    'tot_sqft',
+    'fireplaces',
+    'full_baths',
+    'garages',
+    'garage_sqft',
+    'lot_sqft',
+    'tax_value',
+    'land_tax_value',
+    ]
+
+    df = SFR(df)
+    
+# Set the cols to outlier_cols 
+    cols = outlier_cols
+
+# Use remove_outliers
+    df = remove_outliers(df, 1.5, cols)
+# fillna(0)
+    df.garage_sqft = df.garage_sqft.fillna(0)
+    
+    df.garages = df. garages.fillna(0)
+
+    df.hot_tub = df.hot_tub.fillna(0)
+
+    df.pools = df.pools.fillna(0)
+
+    df.tax_delinquency_flag = df.tax_delinquency_flag.map({'Y':1}).fillna(0)
+
+    df= handle_missing_values(df)
+
+    df.bedrooms = df.bedrooms.map({2: '_2_',
+                 3: '_3_',
+                 4: '_4_',
+                 5: '_5_'
+                })
+
+    df.bathrooms = pd.cut(df.bathrooms,
+                      bins = (0,1,2,3,4,5), 
+                      labels=('_1_', '_2_', '_3_', '_4_', '_5_')
+                     )
+
+    df = df.drop(columns= ['units', 'year_assessed', 'land_use_type', 'county_id'])
 
 
-# # Set the cols to everything but 'date'
-#     cols = [col for col in df.columns if col not in ['trans_date']]
 
-# # Use remove_outliers
-#     df = remove_outliers(df, 1.5, cols)
+# Reset the index
+    df = df.reset_index()
+# drop the resulting 'index' column
+    df = df.drop(columns='index')
 
-# # Reset the index
-#     df = df.reset_index()
-#     # drop the resulting 'index' column
-#     df = df.drop(columns='index')
-
-#     return df
+    return df
 
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~<  SPLIT_DATA_CONTINUOUS  >~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
