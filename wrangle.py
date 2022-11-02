@@ -68,7 +68,7 @@ def gdb(db_name, query):
         having      created the url from my environment file
     '''
     from pandas import read_sql
-    from env import get_db_url
+    from wrangle import get_db_url
     url = get_db_url(db_name)
     return read_sql(query, url)
 
